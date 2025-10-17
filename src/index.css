@@ -1,0 +1,394 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #000000;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #000000;
+}
+
+/* Basic layout styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.grid-cols-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.grid-cols-16 {
+  grid-template-columns: repeat(16, 1fr);
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+.space-y-1 > * + * {
+  margin-top: 0.25rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-white {
+  color: white;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.w-12 {
+  width: 3rem;
+}
+
+.h-12 {
+  height: 3rem;
+}
+
+.w-16 {
+  width: 4rem;
+}
+
+.h-16 {
+  height: 4rem;
+}
+
+.w-4 {
+  width: 1rem;
+}
+
+.h-4 {
+  height: 1rem;
+}
+
+.w-2 {
+  width: 0.5rem;
+}
+
+.h-2 {
+  height: 0.5rem;
+}
+
+.w-1 {
+  width: 0.25rem;
+}
+
+.h-6 {
+  height: 1.5rem;
+}
+
+.w-80 {
+  width: 20rem;
+}
+
+.max-w-4xl {
+  max-width: 56rem;
+}
+
+.max-w-6xl {
+  max-width: 72rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.border-2 {
+  border-width: 2px;
+}
+
+.border-gray-600 {
+  border-color: #4b5563;
+}
+
+.border-gray-700 {
+  border-color: #374151;
+}
+
+.border-gray-500 {
+  border-color: #6b7280;
+}
+
+.border-gray-400 {
+  border-color: #9ca3af;
+}
+
+.border-yellow-400 {
+  border-color: #facc15;
+}
+
+.border-yellow-300 {
+  border-color: #fde047;
+}
+
+.border-white {
+  border-color: white;
+}
+
+.bg-black {
+  background-color: #000000;
+}
+
+.bg-gray-800 {
+  background-color: #1f2937;
+}
+
+.bg-gray-700 {
+  background-color: #374151;
+}
+
+.bg-gray-600 {
+  background-color: #4b5563;
+}
+
+.bg-gray-500 {
+  background-color: #6b7280;
+}
+
+.bg-yellow-500 {
+  background-color: #eab308;
+}
+
+.bg-yellow-400 {
+  background-color: #facc15;
+}
+
+.bg-green-500 {
+  background-color: #22c55e;
+}
+
+.bg-green-400 {
+  background-color: #4ade80;
+}
+
+.bg-red-500 {
+  background-color: #ef4444;
+}
+
+.bg-red-400 {
+  background-color: #f87171;
+}
+
+.bg-blue-500 {
+  background-color: #3b82f6;
+}
+
+.bg-blue-400 {
+  background-color: #60a5fa;
+}
+
+.bg-white {
+  background-color: white;
+}
+
+.hover\:bg-gray-500:hover {
+  background-color: #6b7280;
+}
+
+.hover\:bg-gray-400:hover {
+  background-color: #9ca3af;
+}
+
+.hover\:bg-yellow-400:hover {
+  background-color: #facc15;
+}
+
+.hover\:border-gray-400:hover {
+  border-color: #9ca3af;
+}
+
+.hover\:border-yellow-300:hover {
+  border-color: #fde047;
+}
+
+.active\:scale-95:active {
+  transform: scale(0.95);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.ring-1 {
+  box-shadow: 0 0 0 1px;
+}
+
+.ring-white {
+  box-shadow: 0 0 0 1px white;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-green-400\/50 {
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+}
+
+.shadow-yellow-400\/50 {
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+}
+
+.shadow-white\/50 {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.shadow-red-500\/50 {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.shadow-blue-500\/50 {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.duration-100 {
+  transition-duration: 100ms;
+}
+
+.duration-150 {
+  transition-duration: 150ms;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+.scale-105 {
+  transform: scale(1.05);
+}
+
+/* Custom styles for drum machine */
+.pad-led {
+  transition: all 0.15s ease-in-out;
+}
+
+.pad-led.active {
+  background-color: #00ff00;
+  box-shadow: 0 0 10px #00ff00;
+}
+
+.sequencer-step.active {
+  background-color: #ffffff;
+  box-shadow: 0 0 8px #ffffff;
+}
+
+.bpm-knob {
+  transition: transform 0.1s ease-in-out;
+}
+
+/* Prepare for future image swap */
+.pad-surface {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
