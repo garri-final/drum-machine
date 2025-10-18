@@ -3,10 +3,10 @@ import { NUM_STEPS, NUM_TRACKS } from './types';
 import { SequencerScheduler } from './audio/scheduler';
 import { useSequencerStore } from './state/useSequencerStore';
 import { CategoryTabs } from './ui/CategoryTabs';
-import { SequencerGrid } from './ui/SequencerGrid';
+// import { SequencerGrid } from './ui/SequencerGrid';
 import { categories } from './data/categories';
 import { samples } from './data/samples';
-import type { CategoryId } from './types';
+import type { CategoryId, StepIndex, PadIndex } from './types';
 
 function App() {
   const { 
@@ -27,7 +27,7 @@ function App() {
   
   const [knobRotation, setKnobRotation] = useState(0);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [loadedSamples, setLoadedSamples] = useState<Record<CategoryId, AudioBuffer[]>>({} as Record<CategoryId, AudioBuffer[]>);
+  // const [loadedSamples, setLoadedSamples] = useState<Record<CategoryId, AudioBuffer[]>>({} as Record<CategoryId, AudioBuffer[]>);
   const [isLoading, setIsLoading] = useState(true);
   const schedulerRef = useRef<SequencerScheduler | null>(null);
 
@@ -54,7 +54,7 @@ function App() {
           loadedSamplesByCategory[categoryId] = await Promise.all(samplePromises);
         }
         
-        setLoadedSamples(loadedSamplesByCategory);
+        // setLoadedSamples(loadedSamplesByCategory);
         
         // Initialize scheduler with loaded samples
         const scheduler = new SequencerScheduler();
@@ -62,7 +62,7 @@ function App() {
         
         // Set up scheduler callbacks
         scheduler.setCallbacks(
-          (step: number) => setCurrentStep(step),
+          (step: number) => setCurrentStep(step as StepIndex),
           (padIndex: number) => console.log(`Pad ${padIndex + 1} triggered`)
         );
         
@@ -101,7 +101,8 @@ function App() {
 
 
 
-  // Play a sample from active category
+  // Play a sample from active category (unused but kept for reference)
+  /*
   const playSample = (sampleIndex: number) => {
     if (!audioContext) {
       console.log('Audio context not ready');
@@ -135,6 +136,7 @@ function App() {
       console.error('Error playing sample:', error);
     }
   };
+  */
 
   // Update scheduler when grids change
   useEffect(() => {
@@ -265,34 +267,6 @@ function App() {
     setCurrentStep(0);
   };
 
-  // Test audio with a simple tone
-  const testAudio = () => {
-    if (!audioContext) {
-      console.log('No audio context');
-      return;
-    }
-
-    try {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-      
-      console.log('Test tone played');
-    } catch (error) {
-      console.error('Error playing test tone:', error);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -465,7 +439,7 @@ function App() {
                 onClick={() => {
                   const currentSolo = soloedTracks[activeCategory];
                   const newSolo = currentSolo === pad ? null : pad;
-                  setSoloTrack(activeCategory, newSolo);
+                  setSoloTrack(activeCategory, newSolo as PadIndex | null);
                 }}
               >
                 <div style={{
@@ -491,7 +465,7 @@ function App() {
                     key={`${pad}-${step}`}
                     style={padStyle(Boolean(activeGrid[pad] && activeGrid[pad][step]), step === currentStep, activeColor)}
                     onClick={() => {
-                      toggleGridCell(pad, step);
+                      toggleGridCell(pad as PadIndex, step as StepIndex);
                       // Trigger immediate audio playback
                       if (schedulerRef.current) {
                         schedulerRef.current.triggerPad(pad, activeCategory);
@@ -533,7 +507,7 @@ function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
-                  onClick={() => clearTrack(activeCategory, pad)}
+                  onClick={() => clearTrack(activeCategory, pad as PadIndex)}
                   onMouseEnter={(e) => {
                     const svg = e.currentTarget.querySelector('svg');
                     if (svg) svg.style.opacity = '1';
