@@ -491,7 +491,6 @@ function App() {
                     key={`${pad}-${step}`}
                     style={padStyle(Boolean(activeGrid[pad] && activeGrid[pad][step]), step === currentStep, activeColor)}
                     onClick={() => {
-                      console.log('Pad clicked:', { pad, step, activeCategory });
                       toggleGridCell(pad, step);
                       // Trigger immediate audio playback
                       if (schedulerRef.current) {

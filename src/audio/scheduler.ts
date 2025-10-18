@@ -138,24 +138,13 @@ export class SequencerScheduler {
   }
 
   public triggerPad(padIndex: number, categoryId: CategoryId): void {
-    console.log('Scheduler triggerPad called:', { padIndex, categoryId });
     const samples = this.samples[categoryId];
     const categoryDef = categories[categoryId];
-    console.log('Samples available:', !!samples);
-    console.log('Category def available:', !!categoryDef);
-    
     if (samples && samples[padIndex] && samples[padIndex].buffer) {
-      console.log('Playing sample');
       // Apply BPM-based pitch shifting for melodic categories
       const playbackRate = categoryDef.pitchShiftEnabled ? this.bpm / 120 : 1.0;
       playSample(samples[padIndex].buffer!, 1.0, playbackRate);
       this.onPadTrigger(padIndex);
-    } else {
-      console.log('Sample not found:', { 
-        hasSamples: !!samples, 
-        hasSampleAtPad: samples && !!samples[padIndex],
-        hasBuffer: samples && samples[padIndex] && !!samples[padIndex].buffer 
-      });
     }
   }
 
