@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NUM_STEPS, NUM_TRACKS } from './types';
+import { SequencerScheduler } from './audio/scheduler';
 
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -12,7 +13,7 @@ function App() {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [samples, setSamples] = useState<AudioBuffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const intervalRef = useRef<number | null>(null);
+  const schedulerRef = useRef<SequencerScheduler | null>(null);
 
   // Initialize audio context and load samples
   useEffect(() => {
@@ -31,6 +32,29 @@ function App() {
 
         const loadedSamples = await Promise.all(samplePromises);
         setSamples(loadedSamples);
+        
+        // Initialize scheduler with loaded samples
+        const scheduler = new SequencerScheduler();
+        schedulerRef.current = scheduler;
+        
+        // Set up scheduler callbacks
+        scheduler.setCallbacks(
+          (step: number) => setCurrentStep(step),
+          (padIndex: number) => console.log(`Pad ${padIndex + 1} triggered`)
+        );
+        
+        // Convert AudioBuffers to SampleDef format for scheduler
+        const sampleDefs = loadedSamples.map((buffer, index) => ({
+          id: index as any,
+          name: `Pad ${index + 1}`,
+          url: `/samples/pad${String(index + 1).padStart(2, '0')}.wav`,
+          key: '',
+          buffer
+        }));
+        scheduler.setSamples(sampleDefs);
+        scheduler.setGrid(grid);
+        scheduler.setBpm(bpm);
+        
         setIsLoading(false);
         console.log('Audio initialized and samples loaded');
       } catch (error) {
@@ -40,6 +64,15 @@ function App() {
     };
 
     initAudio();
+  }, []);
+
+  // Cleanup scheduler on unmount
+  useEffect(() => {
+    return () => {
+      if (schedulerRef.current) {
+        schedulerRef.current.destroy();
+      }
+    };
   }, []);
 
 
@@ -73,32 +106,31 @@ function App() {
     }
   };
 
-  // Sequencer loop with audio
+  // Update scheduler when grid changes
   useEffect(() => {
-    if (!isPlaying || !audioContext) return;
+    if (schedulerRef.current) {
+      schedulerRef.current.setGrid(grid);
+    }
+  }, [grid]);
 
-    const playStep = () => {
-      // Play all active samples for current step
-      for (let pad = 0; pad < NUM_TRACKS; pad++) {
-        if (grid[pad] && grid[pad][currentStep]) {
-          playSample(pad);
-        }
-      }
-      
-      // Move to next step
-      setCurrentStep(prev => (prev + 1) % NUM_STEPS);
-    };
+  // Update scheduler BPM when BPM changes
+  useEffect(() => {
+    if (schedulerRef.current) {
+      schedulerRef.current.setBpm(bpm);
+    }
+  }, [bpm]);
 
-    // Start the sequencer
-    const interval = setInterval(playStep, 60000 / bpm / 4);
-    intervalRef.current = interval;
+  // Handle play/stop with scheduler
+  useEffect(() => {
+    if (!schedulerRef.current) return;
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isPlaying, bpm, currentStep, grid, audioContext, samples]);
+    if (isPlaying) {
+      schedulerRef.current.start();
+    } else {
+      schedulerRef.current.stop();
+      setCurrentStep(0);
+    }
+  }, [isPlaying]);
 
   const toggleGridCell = (pad: number, step: number) => {
     setGrid(prev => {
@@ -187,6 +219,12 @@ function App() {
     setIsPlaying(!isPlaying);
   };
 
+  // Handle stop button
+  const handleStop = () => {
+    setIsPlaying(false);
+    setCurrentStep(0);
+  };
+
   // Test audio with a simple tone
   const testAudio = () => {
     if (!audioContext) {
@@ -239,7 +277,7 @@ function App() {
           width: 'fit-content',
           margin: '0 auto 8px auto'
         }}>
-          <button style={buttonStyle} onClick={() => setIsPlaying(true)}>
+          <button style={buttonStyle} onClick={handlePlay}>
             <div style={{ 
               display: 'flex', 
               alignItems: 'flex-start', 
@@ -256,10 +294,7 @@ function App() {
               <div style={buttonTextStyle}>Play</div>
             </div>
           </button>
-          <button style={buttonStyle} onClick={() => {
-            setIsPlaying(false);
-            setCurrentStep(0);
-          }}>
+          <button style={buttonStyle} onClick={handleStop}>
             <div style={{ 
               display: 'flex', 
               alignItems: 'flex-start', 
