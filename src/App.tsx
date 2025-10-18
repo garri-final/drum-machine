@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { NUM_STEPS, NUM_TRACKS } from './types';
 
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [bpm] = useState(120);
+  const [bpm, setBpm] = useState(120);
   const [currentStep, setCurrentStep] = useState(0);
+  const [knobRotation, setKnobRotation] = useState(0);
   const [grid, setGrid] = useState(() => 
-    Array(16).fill(null).map(() => Array(16).fill(false))
+    Array(NUM_TRACKS).fill(null).map(() => Array(NUM_STEPS).fill(false))
   );
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [samples, setSamples] = useState<AudioBuffer[]>([]);
@@ -21,7 +23,7 @@ function App() {
         setAudioContext(ctx);
 
         // Load sample files
-        const samplePromises = Array.from({ length: 16 }, async (_, i) => {
+        const samplePromises = Array.from({ length: NUM_TRACKS }, async (_, i) => {
           const response = await fetch(`/samples/pad${String(i + 1).padStart(2, '0')}.wav`);
           const arrayBuffer = await response.arrayBuffer();
           return ctx.decodeAudioData(arrayBuffer);
@@ -77,14 +79,14 @@ function App() {
 
     const playStep = () => {
       // Play all active samples for current step
-      for (let pad = 0; pad < 16; pad++) {
+      for (let pad = 0; pad < NUM_TRACKS; pad++) {
         if (grid[pad] && grid[pad][currentStep]) {
           playSample(pad);
         }
       }
       
       // Move to next step
-      setCurrentStep(prev => (prev + 1) % 16);
+      setCurrentStep(prev => (prev + 1) % NUM_STEPS);
     };
 
     // Start the sequencer
@@ -105,6 +107,76 @@ function App() {
       newGrid[pad][step] = !newGrid[pad][step];
       return newGrid;
     });
+  };
+
+  // Updated pad styles
+  const padStyle = (selected: boolean, active: boolean): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      position: 'relative',
+      width: 48,
+      height: 48,
+      borderRadius: '10px',
+      border: active ? '2px solid #fcfcfc' : '2px solid #08080A',
+      backgroundImage: selected
+        ? 'linear-gradient(rgb(255, 81, 0), rgb(255, 81, 0)), linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))'
+        : 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+      boxShadow: selected
+        ? 'rgba(255, 255, 255, 0.2) 2px 3px 2px 0px inset, rgba(255, 255, 255, 0.23) 1px 1px 1px 0px inset'
+        : '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+      overflow: 'hidden',
+      cursor: 'pointer',
+    };
+    return base;
+  };
+
+  // Updated button styles
+  const buttonStyle: React.CSSProperties = {
+    position: 'relative',
+    width: 104,
+    height: 104,
+    borderRadius: '10px',
+    border: '2px solid #08080A',
+    backgroundImage: 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+    boxShadow: '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+    overflow: 'hidden',
+    cursor: 'pointer',
+  };
+
+  const buttonTextStyle: React.CSSProperties = {
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontWeight: 500,
+    fontSize: '14px',
+    color: 'white',
+    whiteSpace: 'nowrap',
+    lineHeight: '100%',
+  };
+
+  // Knob drag handlers with BPM increments of 10
+  const handleKnobMouseDown = (e: React.MouseEvent) => {
+    const startX = e.clientX;
+    const startBpm = bpm;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      
+      // Convert mouse movement to BPM change (10 BPM per 20px movement)
+      const bpmChange = Math.round(deltaX / 20) * 10;
+      const newBpm = Math.max(60, Math.min(200, startBpm + bpmChange));
+      
+      // Calculate rotation based on BPM (60-200 range maps to -120 to +120 degrees)
+      const rotation = ((newBpm - 120) / 70) * 120;
+      
+      setBpm(newBpm);
+      setKnobRotation(rotation);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   // Handle play button with audio context initialization
@@ -156,45 +228,127 @@ function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000', color: 'white', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#0A0A0B', color: 'white', padding: '2rem' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '2rem' }}>Drum Machine</h1>
-        
-        {/* Sequencer Grid */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: '1rem' }}>Sequencer</h2>
-          
-          {/* Step indicators */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(16, 1fr)', gap: '0.25rem', marginBottom: '1rem' }}>
-            {Array.from({ length: 16 }, (_, step) => (
-              <div
-                key={step}
-                style={{
-                  height: '32px',
-                  backgroundColor: step === currentStep ? '#ffffff' : '#374151',
-                  border: '1px solid #6b7280',
-                  borderRadius: '0.25rem'
-                }}
-              />
-            ))}
+        {/* Controls Row - Play, Pause, BPM, Knob */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          alignItems: 'center', 
+          marginBottom: '8px',
+          width: 'fit-content',
+          margin: '0 auto 8px auto'
+        }}>
+          <button style={buttonStyle} onClick={() => setIsPlaying(true)}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              justifyContent: 'space-between', 
+              width: '100%', 
+              height: '100%', 
+              padding: '12px 6px', 
+              flexDirection: 'column', 
+              boxSizing: 'border-box' 
+            }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                <path d="M3 2l10 6-10 6V2z"/>
+              </svg>
+              <div style={buttonTextStyle}>Play</div>
+            </div>
+          </button>
+          <button style={buttonStyle} onClick={() => {
+            setIsPlaying(false);
+            setCurrentStep(0);
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              justifyContent: 'space-between', 
+              width: '100%', 
+              height: '100%', 
+              padding: '12px 6px', 
+              flexDirection: 'column', 
+              boxSizing: 'border-box' 
+            }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                <rect x="4" y="4" width="8" height="8"/>
+              </svg>
+              <div style={buttonTextStyle}>Stop</div>
+            </div>
+          </button>
+          <div style={{ 
+            position: 'relative',
+            width: 552,
+            height: 104,
+            borderRadius: '10px',
+            border: '2px solid #08080A',
+            backgroundImage: 'linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.7) 100%), linear-gradient(rgb(34, 33, 38) 0%, rgb(33, 32, 37) 100%)',
+            boxShadow: 'rgba(255, 255, 255, 0.1) -2px -1px 6px 0px inset, rgba(255, 255, 255, 0.12) 2px 2px 9px 0px inset',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ 
+              position: 'absolute', 
+              left: '12px', 
+              top: '54px', 
+              transform: 'translateY(-50%)', 
+              fontFamily: 'DS-Digital, monospace', 
+              fontStyle: 'italic', 
+              fontSize: '94px', 
+              color: 'white', 
+              opacity: 0.8 
+            }}>
+              {bpm} BPM
+            </div>
           </div>
+          <div 
+            style={{ 
+              position: 'relative',
+              width: 104,
+              height: 104,
+              borderRadius: '1000px',
+              border: '2px solid #08080A',
+              backgroundImage: 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+              boxShadow: '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              transform: `rotate(${knobRotation}deg)`,
+              cursor: 'grab',
+              overflow: 'hidden',
+              boxSizing: 'border-box'
+            }}
+            onMouseDown={handleKnobMouseDown}
+          >
+            <div style={{ 
+              position: 'absolute',
+              top: '14px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '8px', 
+              height: '8px', 
+              backgroundColor: 'white', 
+              borderRadius: '100px' 
+            }} />
+          </div>
+        </div>
 
-          {/* Sequencer grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(16, 1fr)', gap: '0.25rem' }}>
-            {Array.from({ length: 16 }, (_, step) => (
-              <div key={step} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {Array.from({ length: 16 }, (_, pad) => (
+        {/* Sequencer Grid 16×8 - 8px gaps */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: `repeat(${NUM_STEPS}, 48px)`, 
+            gap: '8px',
+            justifyContent: 'center'
+          }}>
+            {Array.from({ length: NUM_STEPS }, (_, step) => (
+              <div key={step} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {Array.from({ length: NUM_TRACKS }, (_, pad) => (
                   <button
                     key={`${pad}-${step}`}
+                    style={padStyle(Boolean(grid[pad] && grid[pad][step]), step === currentStep)}
                     onClick={() => toggleGridCell(pad, step)}
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      backgroundColor: grid[pad] && grid[pad][step] ? '#facc15' : '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '0.125rem',
-                      cursor: 'pointer'
-                    }}
+                    aria-pressed={grid[pad] && grid[pad][step] ? 'true' : 'false'}
                   />
                 ))}
               </div>
@@ -202,92 +356,7 @@ function App() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <button 
-            onClick={handlePlay}
-            style={{ 
-              backgroundColor: isPlaying ? '#ef4444' : '#22c55e', 
-              color: 'white', 
-              padding: '1rem 2rem', 
-              border: 'none', 
-              borderRadius: '0.5rem', 
-              fontSize: '1rem',
-              marginRight: '1rem',
-              cursor: 'pointer'
-            }}
-          >
-            {isPlaying ? 'Stop' : 'Play'}
-          </button>
-          <button 
-            onClick={() => {
-              console.log('Testing audio...');
-              console.log('Audio context:', audioContext);
-              console.log('Samples loaded:', samples.length);
-              if (samples.length > 0) {
-                playSample(0);
-              }
-            }}
-            style={{ 
-              backgroundColor: '#3b82f6', 
-              color: 'white', 
-              padding: '1rem 2rem', 
-              border: 'none', 
-              borderRadius: '0.5rem', 
-              fontSize: '1rem',
-              marginRight: '1rem',
-              cursor: 'pointer'
-            }}
-          >
-            Test Audio
-          </button>
-          <button 
-            onClick={testAudio}
-            style={{ 
-              backgroundColor: '#8b5cf6', 
-              color: 'white', 
-              padding: '1rem 2rem', 
-              border: 'none', 
-              borderRadius: '0.5rem', 
-              fontSize: '1rem',
-              marginRight: '1rem',
-              cursor: 'pointer'
-            }}
-          >
-            Test Tone
-          </button>
-          <span style={{ fontSize: '1.2rem' }}>BPM: {bpm}</span>
-        </div>
-
-        {/* Pad grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', maxWidth: '400px', margin: '0 auto' }}>
-          {Array.from({ length: 16 }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                console.log(`Pad ${i + 1} clicked`);
-                playSample(i);
-              }}
-              style={{
-                width: '80px',
-                height: '80px',
-                backgroundColor: '#eab308',
-                border: '2px solid #facc15',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                color: 'black',
-                fontWeight: 'bold'
-              }}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '1rem' }}>
-          Click sequencer cells to toggle hits. Current step: {currentStep + 1}
-        </div>
+        {/* Test buttons removed per requirements */}
       </div>
     </div>
   );

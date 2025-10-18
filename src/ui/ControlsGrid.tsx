@@ -1,4 +1,4 @@
-import React from 'react';
+// React import not required with automatic JSX runtime
 import { BpmKnob } from './BpmKnob';
 import { BpmDisplay } from './BpmDisplay';
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SequencerState, StepIndex, PadIndex } from '../types';
+import type { SequencerState, StepIndex, PadIndex } from '../types';
 
 interface SequencerStore extends SequencerState {
   // Actions

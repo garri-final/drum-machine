@@ -5,7 +5,7 @@ A desktop-first web drum machine built with Vite + React + TypeScript and Web Au
 ## Features
 
 - **16 sound pads** (4×4 grid) with keyboard mapping
-- **16-step, 16-track sequencer** with polyphony
+- **16-step sequencer** with polyphony
 - **Real-time editing** while transport is running
 - **Play/Stop transport** with BPM control (60-200)
 - **Visual playhead** and per-pad activity lights
@@ -50,10 +50,20 @@ Placeholder silent WAV files are already created. Replace them with your own dru
 ## Usage
 
 1. **Loading**: Wait for "Loading samples..." to complete
-2. **Sequencer**: Click cells in the 16×16 grid to toggle hits
+2. **Sequencer**: Click cells in the 16×8 grid to toggle hits
 3. **Playback**: Click Play to start the sequencer loop
 4. **Real-time editing**: While playing, click pads to toggle hits on current step
 5. **BPM control**: Enable BPM Edit mode, then use the knob to adjust tempo
+
+## Alternative Variant: 16×8 Sequencer (current)
+
+- Single sequencer grid only: 16 steps × 8 tracks; the 4×4 pad grid is removed.
+- First 8 samples are dedicated to each row: pad01.wav … pad08.wav.
+- No separate 16×1 playhead bar; the active column is reflected on every cell using four visual states from the Figma pad component:
+  - Selected=Off, Active=Off: dark gradient, dark border
+  - Selected=Off, Active=On: dark gradient, light border
+  - Selected=On, Active=Off: orange fill, dark border
+  - Selected=On, Active=On: orange fill, light border
 
 ## Architecture
 

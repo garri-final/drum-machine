@@ -1,6 +1,7 @@
 import { getAudioContext, getCurrentTime } from './audioContext';
 import { playSample } from './playSample';
-import { SampleDef } from '../types';
+import type { SampleDef } from '../types';
+import { NUM_STEPS, NUM_TRACKS } from '../types';
 
 export class SequencerScheduler {
   private intervalId: number | null = null;
@@ -19,7 +20,7 @@ export class SequencerScheduler {
   }
 
   private initializeGrid(): void {
-    this.grid = Array(16).fill(null).map(() => Array(16).fill(false));
+    this.grid = Array(NUM_TRACKS).fill(null).map(() => Array(NUM_STEPS).fill(false));
   }
 
   public setSamples(samples: SampleDef[]): void {
@@ -70,14 +71,14 @@ export class SequencerScheduler {
     while (this.nextNoteTime < currentTime + this.scheduleAheadTime) {
       this.scheduleStep(this.nextNoteTime, this.currentStep);
       this.nextNoteTime += this.getStepDuration();
-      this.currentStep = (this.currentStep + 1) % 16;
+      this.currentStep = (this.currentStep + 1) % NUM_STEPS;
       this.onStepChange(this.currentStep);
     }
   }
 
   private scheduleStep(time: number, step: number): void {
     // Schedule all pads that are active on this step
-    for (let padIndex = 0; padIndex < 16; padIndex++) {
+    for (let padIndex = 0; padIndex < NUM_TRACKS; padIndex++) {
       if (this.grid[padIndex] && this.grid[padIndex][step]) {
         const sample = this.samples[padIndex];
         if (sample && sample.buffer) {

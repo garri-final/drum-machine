@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { PadIndex } from '../types';
+import type { PadIndex } from '../types';
 import { samples } from '../data/samples';
 
 interface PadsGridProps {
   onPadTrigger: (padIndex: PadIndex) => void;
   onPadToggle: (padIndex: PadIndex) => void;
   isPlaying: boolean;
-  currentStep: number;
+  currentStep: number; // kept for API compatibility
   activePads: Set<PadIndex>;
 }
 
@@ -14,7 +14,7 @@ export const PadsGrid = ({
   onPadTrigger, 
   onPadToggle, 
   isPlaying, 
-  currentStep,
+  currentStep: _currentStep,
   activePads 
 }: PadsGridProps) => {
   const [keyboardMap] = useState(() => {
@@ -66,22 +66,22 @@ export const PadsGrid = ({
       
       {/* Pads grid */}
       <div className="grid grid-cols-4 gap-2 w-80 mx-auto">
-        {padLayout.map((row, rowIndex) => 
-          row.map((padIndex) => (
-            <div key={padIndex} className="flex flex-col items-center space-y-1">
+        {padLayout.map((row) => 
+          row.map((pad) => (
+            <div key={pad} className="flex flex-col items-center space-y-1">
               {/* Pad */}
               <button
-                id={`pad-${padIndex + 1}`}
-                data-pad={padIndex + 1}
+                id={`pad-${pad + 1}`}
+                data-pad={pad + 1}
                 className={`
                   w-16 h-16 rounded-lg border-2 transition-all duration-100
-                  ${activePads.has(padIndex) 
+                  ${activePads.has(pad as PadIndex) 
                     ? 'bg-yellow-400 border-yellow-300 shadow-lg shadow-yellow-400/50' 
                     : 'bg-yellow-500 border-yellow-400 hover:bg-yellow-400 hover:border-yellow-300'
                   }
                   active:scale-95
                 `}
-                onMouseDown={() => handlePadClick(padIndex)}
+                onMouseDown={() => handlePadClick(pad as PadIndex)}
                 style={{
                   '--pad-bg': 'none' // Prepare for future image swap
                 } as React.CSSProperties}
@@ -93,7 +93,7 @@ export const PadsGrid = ({
               <div 
                 className={`
                   w-2 h-2 rounded-full transition-all duration-150
-                  ${activePads.has(padIndex) 
+                  ${activePads.has(pad as PadIndex) 
                     ? 'bg-green-400 shadow-lg shadow-green-400/50' 
                     : 'bg-gray-600'
                   }

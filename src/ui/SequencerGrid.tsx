@@ -1,5 +1,5 @@
-import React from 'react';
-import { StepIndex, PadIndex } from '../types';
+// React import not required with automatic JSX runtime
+import type { StepIndex, PadIndex } from '../types';
 
 interface SequencerGridProps {
   grid: boolean[][];

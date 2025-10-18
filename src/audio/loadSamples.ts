@@ -1,4 +1,4 @@
-import { SampleDef } from '../types';
+import type { SampleDef } from '../types';
 import { getAudioContext } from './audioContext';
 
 export const loadSamples = async (samples: SampleDef[]): Promise<SampleDef[]> => {
