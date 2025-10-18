@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { PadIndex } from '../types';
+import type { PadIndex, CategoryId } from '../types';
 import { samples } from '../data/samples';
 
 interface PadsGridProps {
@@ -8,6 +8,7 @@ interface PadsGridProps {
   isPlaying: boolean;
   currentStep: number; // kept for API compatibility
   activePads: Set<PadIndex>;
+  activeCategory: CategoryId;
 }
 
 export const PadsGrid = ({ 
@@ -15,11 +16,13 @@ export const PadsGrid = ({
   onPadToggle, 
   isPlaying, 
   currentStep: _currentStep,
-  activePads 
+  activePads,
+  activeCategory
 }: PadsGridProps) => {
   const [keyboardMap] = useState(() => {
     const map = new Map<string, PadIndex>();
-    samples.forEach((sample, index) => {
+    const categorySamples = samples[activeCategory];
+    categorySamples.forEach((sample, index) => {
       map.set(sample.key.toLowerCase(), index as PadIndex);
       map.set(sample.key.toUpperCase(), index as PadIndex);
     });

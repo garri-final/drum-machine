@@ -1,21 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { NUM_STEPS, NUM_TRACKS } from './types';
 import { SequencerScheduler } from './audio/scheduler';
+import { useSequencerStore } from './state/useSequencerStore';
+import { CategoryTabs } from './ui/CategoryTabs';
+import { SequencerGrid } from './ui/SequencerGrid';
+import { categories } from './data/categories';
+import { samples } from './data/samples';
+import type { CategoryId } from './types';
 
 function App() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [bpm, setBpm] = useState(120);
-  const [currentStep, setCurrentStep] = useState(0);
+  const { 
+    bpm, 
+    isPlaying, 
+    currentStep, 
+    grids, 
+    activeCategory, 
+    mutedCategories,
+    soloedTracks,
+    setBpm, 
+    setPlaying, 
+    setCurrentStep, 
+    toggleGridCell,
+    setSoloTrack,
+    clearTrack
+  } = useSequencerStore();
+  
   const [knobRotation, setKnobRotation] = useState(0);
-  const [grid, setGrid] = useState(() => 
-    Array(NUM_TRACKS).fill(null).map(() => Array(NUM_STEPS).fill(false))
-  );
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [samples, setSamples] = useState<AudioBuffer[]>([]);
+  const [loadedSamples, setLoadedSamples] = useState<Record<CategoryId, AudioBuffer[]>>({} as Record<CategoryId, AudioBuffer[]>);
   const [isLoading, setIsLoading] = useState(true);
   const schedulerRef = useRef<SequencerScheduler | null>(null);
 
-  // Initialize audio context and load samples
+  // Initialize audio context and load samples for all categories
   useEffect(() => {
     const initAudio = async () => {
       try {
@@ -23,15 +39,22 @@ function App() {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         setAudioContext(ctx);
 
-        // Load sample files
-        const samplePromises = Array.from({ length: NUM_TRACKS }, async (_, i) => {
-          const response = await fetch(`/samples/pad${String(i + 1).padStart(2, '0')}.wav`);
-          const arrayBuffer = await response.arrayBuffer();
-          return ctx.decodeAudioData(arrayBuffer);
-        });
-
-        const loadedSamples = await Promise.all(samplePromises);
-        setSamples(loadedSamples);
+        // Load samples for all categories
+        const categoryIds: CategoryId[] = ['PO-12', 'PO-14', 'PO-16', 'PO-20', 'PO-28', 'PO-32', 'PO-33', 'PO-35', 'PO-127'];
+        const loadedSamplesByCategory: Record<CategoryId, AudioBuffer[]> = {} as Record<CategoryId, AudioBuffer[]>;
+        
+        for (const categoryId of categoryIds) {
+          const categorySamples = samples[categoryId];
+          const samplePromises = categorySamples.map(async (sample) => {
+            const response = await fetch(sample.url);
+            const arrayBuffer = await response.arrayBuffer();
+            return ctx.decodeAudioData(arrayBuffer);
+          });
+          
+          loadedSamplesByCategory[categoryId] = await Promise.all(samplePromises);
+        }
+        
+        setLoadedSamples(loadedSamplesByCategory);
         
         // Initialize scheduler with loaded samples
         const scheduler = new SequencerScheduler();
@@ -44,19 +67,20 @@ function App() {
         );
         
         // Convert AudioBuffers to SampleDef format for scheduler
-        const sampleDefs = loadedSamples.map((buffer, index) => ({
-          id: index as any,
-          name: `Pad ${index + 1}`,
-          url: `/samples/pad${String(index + 1).padStart(2, '0')}.wav`,
-          key: '',
-          buffer
-        }));
+        const sampleDefs: Record<CategoryId, any[]> = {} as Record<CategoryId, any[]>;
+        categoryIds.forEach(categoryId => {
+          sampleDefs[categoryId] = loadedSamplesByCategory[categoryId].map((buffer, index) => ({
+            ...samples[categoryId][index],
+            buffer
+          }));
+        });
+        
         scheduler.setSamples(sampleDefs);
-        scheduler.setGrid(grid);
+        scheduler.setGrids(grids);
         scheduler.setBpm(bpm);
         
         setIsLoading(false);
-        console.log('Audio initialized and samples loaded');
+        console.log('Audio initialized and samples loaded for all categories');
       } catch (error) {
         console.error('Failed to initialize audio:', error);
         setIsLoading(false);
@@ -77,7 +101,7 @@ function App() {
 
 
 
-  // Play a sample
+  // Play a sample from active category
   const playSample = (sampleIndex: number) => {
     if (!audioContext) {
       console.log('Audio context not ready');
@@ -85,33 +109,47 @@ function App() {
     }
 
     try {
-      // Use the actual loaded samples instead of synthetic sounds
-      if (samples[sampleIndex]) {
+      const categorySamples = loadedSamples[activeCategory];
+      const categoryDef = categories[activeCategory];
+      
+      if (categorySamples && categorySamples[sampleIndex]) {
         const source = audioContext.createBufferSource();
         const gainNode = audioContext.createGain();
         
-        source.buffer = samples[sampleIndex];
+        source.buffer = categorySamples[sampleIndex];
         gainNode.gain.value = 0.8;
+        
+        // Apply BPM-based pitch shifting for melodic categories
+        const playbackRate = categoryDef.pitchShiftEnabled ? bpm / 120 : 1.0;
+        source.playbackRate.value = playbackRate;
         
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
         source.start();
-        console.log(`Playing loaded sample ${sampleIndex + 1}`);
+        console.log(`Playing ${activeCategory} sample ${sampleIndex + 1} at ${playbackRate}x speed`);
       } else {
-        console.log(`Sample ${sampleIndex + 1} not loaded`);
+        console.log(`Sample ${sampleIndex + 1} not loaded for ${activeCategory}`);
       }
     } catch (error) {
       console.error('Error playing sample:', error);
     }
   };
 
-  // Update scheduler when grid changes
+  // Update scheduler when grids change
   useEffect(() => {
     if (schedulerRef.current) {
-      schedulerRef.current.setGrid(grid);
+      schedulerRef.current.setGrids(grids);
     }
-  }, [grid]);
+  }, [grids]);
+
+  // Update scheduler when mute/solo state changes
+  useEffect(() => {
+    if (schedulerRef.current) {
+      schedulerRef.current.setMutedCategories(mutedCategories);
+      schedulerRef.current.setSoloedTracks(soloedTracks);
+    }
+  }, [mutedCategories, soloedTracks]);
 
   // Update scheduler BPM when BPM changes
   useEffect(() => {
@@ -125,24 +163,24 @@ function App() {
     if (!schedulerRef.current) return;
 
     if (isPlaying) {
+      // Make sure scheduler has the latest grids before starting
+      schedulerRef.current.setGrids(grids);
+      schedulerRef.current.setMutedCategories(mutedCategories);
+      schedulerRef.current.setSoloedTracks(soloedTracks);
       schedulerRef.current.start();
     } else {
       schedulerRef.current.stop();
       setCurrentStep(0);
     }
-  }, [isPlaying]);
+  }, [isPlaying, grids, mutedCategories, soloedTracks]);
 
-  const toggleGridCell = (pad: number, step: number) => {
-    setGrid(prev => {
-      const newGrid = [...prev];
-      newGrid[pad] = [...newGrid[pad]];
-      newGrid[pad][step] = !newGrid[pad][step];
-      return newGrid;
-    });
-  };
+  // Get current active grid and color
+  const activeGrid = grids[activeCategory];
+  const activeColor = categories[activeCategory].color;
 
-  // Updated pad styles
-  const padStyle = (selected: boolean, active: boolean): React.CSSProperties => {
+  // Updated pad styles with dynamic color
+  const padStyle = (selected: boolean, active: boolean, color: string): React.CSSProperties => {
+    const isMuted = mutedCategories.has(activeCategory);
     const base: React.CSSProperties = {
       position: 'relative',
       width: 48,
@@ -150,13 +188,15 @@ function App() {
       borderRadius: '10px',
       border: active ? '2px solid #fcfcfc' : '2px solid #08080A',
       backgroundImage: selected
-        ? 'linear-gradient(rgb(255, 81, 0), rgb(255, 81, 0)), linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))'
+        ? `linear-gradient(${color}, ${color}), linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))`
         : 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
       boxShadow: selected
         ? 'rgba(255, 255, 255, 0.2) 2px 3px 2px 0px inset, rgba(255, 255, 255, 0.23) 1px 1px 1px 0px inset'
         : '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
       overflow: 'hidden',
       cursor: 'pointer',
+      opacity: isMuted && !active ? 0.5 : 1.0, // Keep current step fully visible even when muted
+      transition: 'opacity 0.2s ease',
     };
     return base;
   };
@@ -216,12 +256,12 @@ function App() {
     if (audioContext && audioContext.state === 'suspended') {
       await audioContext.resume();
     }
-    setIsPlaying(!isPlaying);
+    setPlaying(!isPlaying);
   };
 
   // Handle stop button
   const handleStop = () => {
-    setIsPlaying(false);
+    setPlaying(false);
     setCurrentStep(0);
   };
 
@@ -368,28 +408,156 @@ function App() {
           </div>
         </div>
 
-        {/* Sequencer Grid 16×8 - 8px gaps */}
-        <div style={{ marginBottom: '2rem' }}>
+        {/* Column Numbers Row */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: `repeat(${NUM_STEPS}, 48px)`, 
+          gap: '8px',
+          justifyContent: 'center',
+          marginBottom: '8px',
+          paddingTop: '10px'
+        }}>
+          {Array.from({ length: NUM_STEPS }, (_, step) => (
+            <div key={step} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '48px',
+              height: '24px',
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontWeight: 500,
+              fontSize: '14px',
+              color: (step + 1) % 4 === 1 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.2)',
+              textAlign: 'center'
+            }}>
+              {step + 1}
+            </div>
+          ))}
+        </div>
+
+        {/* Sequencer Grid with Side Columns */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          marginBottom: '2rem'
+        }}>
+          {/* Left Column - Solo Buttons */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px',
+            marginRight: '8px'
+          }}>
+            {Array.from({ length: NUM_TRACKS }, (_, pad) => (
+              <button
+                key={`solo-${pad}`}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onClick={() => {
+                  const currentSolo = soloedTracks[activeCategory];
+                  const newSolo = currentSolo === pad ? null : pad;
+                  setSoloTrack(activeCategory, newSolo);
+                }}
+              >
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: soloedTracks[activeCategory] === pad ? activeColor : 'rgba(255, 255, 255, 0.12)'
+                }} />
+              </button>
+            ))}
+          </div>
+
+          {/* Main Sequencer Grid */}
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: `repeat(${NUM_STEPS}, 48px)`, 
-            gap: '8px',
-            justifyContent: 'center'
+            gap: '8px'
           }}>
             {Array.from({ length: NUM_STEPS }, (_, step) => (
               <div key={step} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {Array.from({ length: NUM_TRACKS }, (_, pad) => (
                   <button
                     key={`${pad}-${step}`}
-                    style={padStyle(Boolean(grid[pad] && grid[pad][step]), step === currentStep)}
-                    onClick={() => toggleGridCell(pad, step)}
-                    aria-pressed={grid[pad] && grid[pad][step] ? 'true' : 'false'}
+                    style={padStyle(Boolean(activeGrid[pad] && activeGrid[pad][step]), step === currentStep, activeColor)}
+                    onClick={() => {
+                      console.log('Pad clicked:', { pad, step, activeCategory });
+                      toggleGridCell(pad, step);
+                      // Trigger immediate audio playback
+                      if (schedulerRef.current) {
+                        schedulerRef.current.triggerPad(pad, activeCategory);
+                      }
+                    }}
+                    aria-pressed={activeGrid[pad] && activeGrid[pad][step] ? 'true' : 'false'}
                   />
                 ))}
               </div>
             ))}
           </div>
+
+          {/* Right Column - Clear Buttons */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px',
+            marginLeft: '8px'
+          }}>
+            {Array.from({ length: NUM_TRACKS }, (_, pad) => {
+              // Only show clear button if this track has at least one active pad
+              const hasActivePads = activeGrid[pad] && activeGrid[pad].some(step => step);
+              
+              if (!hasActivePads) {
+                return <div key={`clear-${pad}`} style={{ width: '48px', height: '48px' }} />;
+              }
+              
+              return (
+                <button
+                  key={`clear-${pad}`}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onClick={() => clearTrack(activeCategory, pad)}
+                  onMouseEnter={(e) => {
+                    const svg = e.currentTarget.querySelector('svg');
+                    if (svg) svg.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    const svg = e.currentTarget.querySelector('svg');
+                    if (svg) svg.style.opacity = '0.2';
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="white" style={{ 
+                    opacity: 0.2,
+                    transition: 'opacity 0.2s ease'
+                  }}>
+                    <path d="M9.5 2.5L2.5 9.5M2.5 2.5L9.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Category Tabs */}
+        <CategoryTabs />
 
         {/* Test buttons removed per requirements */}
       </div>

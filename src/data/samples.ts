@@ -1,16 +1,17 @@
-import type { SampleDef } from '../types';
+import type { SampleDef, CategoryId } from '../types';
+import { categoryIds } from './categories';
 
-// Limit to first 8 samples for 8 dedicated tracks
-export const samples: SampleDef[] = [
-  { id: 0, name: "Kick 1", url: "/samples/pad01.wav", key: "z" },
-  { id: 1, name: "Snare 1", url: "/samples/pad02.wav", key: "x" },
-  { id: 2, name: "Hi-Hat 1", url: "/samples/pad03.wav", key: "c" },
-  { id: 3, name: "Crash 1", url: "/samples/pad04.wav", key: "v" },
-  { id: 4, name: "Kick 2", url: "/samples/pad05.wav", key: "a" },
-  { id: 5, name: "Snare 2", url: "/samples/pad06.wav", key: "s" },
-  { id: 6, name: "Hi-Hat 2", url: "/samples/pad07.wav", key: "d" },
-  { id: 7, name: "Crash 2", url: "/samples/pad08.wav", key: "f" },
-];
+// Generate samples for all categories
+export const samples: Record<CategoryId, SampleDef[]> = categoryIds.reduce((acc, categoryId) => {
+  acc[categoryId] = Array.from({ length: 12 }, (_, i) => ({
+    id: i as any,
+    name: `Pad ${i + 1}`,
+    url: `/samples/${categoryId}/pad${String(i + 1).padStart(2, '0')}.wav`,
+    key: String.fromCharCode(97 + i), // a, b, c, d, e, f, g, h, i, j, k, l
+    category: categoryId,
+  }));
+  return acc;
+}, {} as Record<CategoryId, SampleDef[]>);
 
 // Controls mapping for 5x5 grid
 export const controlsMap = {

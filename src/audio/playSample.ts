@@ -1,12 +1,13 @@
 import { getAudioContext } from './audioContext';
 import { connectFxChain } from './pitchShift';
 
-export const playSample = (buffer: AudioBuffer, volume: number = 1.0): void => {
+export const playSample = (buffer: AudioBuffer, volume: number = 1.0, playbackRate: number = 1.0): void => {
   const audioContext = getAudioContext();
   
   // Create source node
   const source = audioContext.createBufferSource();
   source.buffer = buffer;
+  source.playbackRate.value = playbackRate;
   
   // Create gain node
   const gainNode = audioContext.createGain();

@@ -1,7 +1,8 @@
 import { getAudioContext, getCurrentTime } from './audioContext';
 import { playSample } from './playSample';
-import type { SampleDef } from '../types';
+import type { SampleDef, CategoryId } from '../types';
 import { NUM_STEPS, NUM_TRACKS } from '../types';
+import { categories } from '../data/categories';
 
 export class SequencerScheduler {
   private intervalId: number | null = null;
@@ -10,25 +11,31 @@ export class SequencerScheduler {
   private bpm: number = 120;
   private scheduleAheadTime: number = 0.1; // 100ms lookahead
   private lookaheadInterval: number = 25; // 25ms scheduling interval
-  private samples: SampleDef[] = [];
-  private grid: boolean[][] = [];
+  private samples: Record<CategoryId, SampleDef[]> = {} as Record<CategoryId, SampleDef[]>;
+  private grids: Record<CategoryId, boolean[][]> = {} as Record<CategoryId, boolean[][]>;
+  private mutedCategories: Set<CategoryId> = new Set();
+  private soloedTracks: Record<CategoryId, number | null> = {} as Record<CategoryId, number | null>;
   private onStepChange: (step: number) => void = () => {};
   private onPadTrigger: (padIndex: number) => void = () => {};
 
   constructor() {
-    this.initializeGrid();
+    // No need to initialize grids here - they'll be set via setGrids
   }
 
-  private initializeGrid(): void {
-    this.grid = Array(NUM_TRACKS).fill(null).map(() => Array(NUM_STEPS).fill(false));
-  }
-
-  public setSamples(samples: SampleDef[]): void {
+  public setSamples(samples: Record<CategoryId, SampleDef[]>): void {
     this.samples = samples;
   }
 
-  public setGrid(grid: boolean[][]): void {
-    this.grid = grid;
+  public setGrids(grids: Record<CategoryId, boolean[][]>): void {
+    this.grids = grids;
+  }
+
+  public setMutedCategories(mutedCategories: Set<CategoryId>): void {
+    this.mutedCategories = mutedCategories;
+  }
+
+  public setSoloedTracks(soloedTracks: Record<CategoryId, number | null>): void {
+    this.soloedTracks = soloedTracks;
   }
 
   public setBpm(bpm: number): void {
@@ -77,27 +84,52 @@ export class SequencerScheduler {
   }
 
   private scheduleStep(time: number, step: number): void {
-    // Schedule all pads that are active on this step
-    for (let padIndex = 0; padIndex < NUM_TRACKS; padIndex++) {
-      if (this.grid[padIndex] && this.grid[padIndex][step]) {
-        const sample = this.samples[padIndex];
-        if (sample && sample.buffer) {
-          // Create and schedule the audio source
-          const audioContext = getAudioContext();
-          const source = audioContext.createBufferSource();
-          const gainNode = audioContext.createGain();
+    // Schedule all pads that are active on this step across ALL categories
+    Object.keys(this.grids).forEach(categoryId => {
+      const category = categoryId as CategoryId;
+      
+      // Skip muted categories
+      if (this.mutedCategories.has(category)) {
+        return;
+      }
+      
+      const grid = this.grids[category];
+      const samples = this.samples[category];
+      const categoryDef = categories[category];
+      const soloedTrack = this.soloedTracks[category];
+      
+      if (grid && samples) {
+        for (let padIndex = 0; padIndex < NUM_TRACKS; padIndex++) {
+          // Skip if there's a soloed track and this isn't it
+          if (soloedTrack !== null && soloedTrack !== padIndex) {
+            continue;
+          }
           
-          source.buffer = sample.buffer;
-          gainNode.gain.value = 1.0;
-          
-          source.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          source.start(time);
-          this.onPadTrigger(padIndex);
+          if (grid[padIndex] && grid[padIndex][step]) {
+            const sample = samples[padIndex];
+            if (sample && sample.buffer) {
+              // Create and schedule the audio source
+              const audioContext = getAudioContext();
+              const source = audioContext.createBufferSource();
+              const gainNode = audioContext.createGain();
+              
+              source.buffer = sample.buffer;
+              gainNode.gain.value = 1.0;
+              
+              // Apply BPM-based pitch shifting for melodic categories
+              const playbackRate = categoryDef.pitchShiftEnabled ? this.bpm / 120 : 1.0;
+              source.playbackRate.value = playbackRate;
+              
+              source.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+              
+              source.start(time);
+              this.onPadTrigger(padIndex);
+            }
+          }
         }
       }
-    }
+    });
   }
 
   private getStepDuration(): number {
@@ -105,11 +137,25 @@ export class SequencerScheduler {
     return 60 / this.bpm / 4;
   }
 
-  public triggerPad(padIndex: number): void {
-    const sample = this.samples[padIndex];
-    if (sample && sample.buffer) {
-      playSample(sample.buffer, 1.0);
+  public triggerPad(padIndex: number, categoryId: CategoryId): void {
+    console.log('Scheduler triggerPad called:', { padIndex, categoryId });
+    const samples = this.samples[categoryId];
+    const categoryDef = categories[categoryId];
+    console.log('Samples available:', !!samples);
+    console.log('Category def available:', !!categoryDef);
+    
+    if (samples && samples[padIndex] && samples[padIndex].buffer) {
+      console.log('Playing sample');
+      // Apply BPM-based pitch shifting for melodic categories
+      const playbackRate = categoryDef.pitchShiftEnabled ? this.bpm / 120 : 1.0;
+      playSample(samples[padIndex].buffer!, 1.0, playbackRate);
       this.onPadTrigger(padIndex);
+    } else {
+      console.log('Sample not found:', { 
+        hasSamples: !!samples, 
+        hasSampleAtPad: samples && !!samples[padIndex],
+        hasBuffer: samples && samples[padIndex] && !!samples[padIndex].buffer 
+      });
     }
   }
 
