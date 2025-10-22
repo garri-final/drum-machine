@@ -22,7 +22,9 @@ function App() {
     setCurrentStep, 
     toggleGridCell,
     setSoloTrack,
-    clearTrack
+    clearTrack,
+    setActiveCategory,
+    toggleCategoryMute
   } = useSequencerStore();
   
   const [knobRotation, setKnobRotation] = useState(0);
@@ -223,6 +225,7 @@ function App() {
     color: 'white',
     whiteSpace: 'nowrap',
     lineHeight: '100%',
+    textTransform: 'uppercase',
   };
 
   // Knob drag handlers with BPM increments of 10
@@ -280,9 +283,313 @@ function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0A0A0B', color: 'white', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#0A0A0B', color: 'white' }} className="md:p-8">
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Controls Row - Play, Pause, BPM, Knob */}
+        {/* Mobile Layout Only */}
+        <div className="block md:hidden">
+          {/* Mobile Controls Row */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '6px', 
+            alignItems: 'center', 
+            padding: '12px 18px',
+            marginBottom: '6px'
+          }}>
+            {/* Play/Pause Toggle Button */}
+            <button 
+              style={{
+                position: 'relative',
+                width: 64,
+                height: 64,
+                borderRadius: '10px',
+                border: '2px solid #08080A',
+                backgroundImage: 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+                boxShadow: '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onClick={handlePlay}
+            >
+              {isPlaying ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                  <rect x="4" y="2" width="3" height="12"/>
+                  <rect x="9" y="2" width="3" height="12"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                  <path d="M3 2l10 6-10 6V2z"/>
+                </svg>
+              )}
+            </button>
+
+            {/* BPM Display - Full Width */}
+            <div style={{ 
+              position: 'relative',
+              flex: 1,
+              height: 64,
+              borderRadius: '10px',
+              border: '2px solid #08080A',
+              backgroundImage: 'linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.7) 100%), linear-gradient(rgb(34, 33, 38) 0%, rgb(33, 32, 37) 100%)',
+              boxShadow: 'rgba(255, 255, 255, 0.1) -2px -1px 6px 0px inset, rgba(255, 255, 255, 0.12) 2px 2px 9px 0px inset',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px'
+            }}>
+              <div style={{ 
+                fontFamily: 'DS-Digital, monospace', 
+                fontStyle: 'italic', 
+                fontSize: '44px', 
+                color: 'white', 
+                opacity: 1.0 
+              }}>
+                {bpm} BPM
+              </div>
+            </div>
+
+            {/* BPM Knob */}
+            <div 
+              style={{ 
+                position: 'relative',
+                width: 64,
+                height: 64,
+                borderRadius: '1000px',
+                border: '2px solid #08080A',
+                backgroundImage: 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+                boxShadow: '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                transform: `rotate(${knobRotation}deg)`,
+                cursor: 'grab',
+                overflow: 'hidden',
+                boxSizing: 'border-box'
+              }}
+              onMouseDown={handleKnobMouseDown}
+            >
+              <div style={{ 
+                position: 'absolute',
+                top: '12px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '8px', 
+                height: '8px', 
+                backgroundColor: 'white', 
+                borderRadius: '100px' 
+              }} />
+            </div>
+          </div>
+
+          {/* Mobile Category Tabs */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '6px', 
+            padding: '0px 18px',
+            marginBottom: '12px',
+            overflowX: 'auto'
+          }}>
+            {Object.entries(categories).map(([categoryId, category]) => {
+              const isActive = activeCategory === categoryId;
+              const isMuted = mutedCategories.has(categoryId as CategoryId);
+              
+              return (
+                <button
+                  key={categoryId}
+                  style={{
+                    position: 'relative',
+                    width: '84px',
+                    height: '42px',
+                    borderRadius: '8px',
+                    border: isActive ? `2px solid ${category.color}` : '2px solid #08080A',
+                    backgroundImage: 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+                    boxShadow: 'rgba(255, 255, 255, 0.03) 3px 2px 2px 0px inset, rgba(255, 255, 255, 0.13) 1px 1px 1px 0px inset',
+                    cursor: 'pointer',
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    fontWeight: 500,
+                    fontSize: '13px',
+                    color: isMuted ? 'rgba(255, 255, 255, 0.5)' : 'white',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                  onClick={() => setActiveCategory(categoryId as CategoryId)}
+                  onDoubleClick={() => toggleCategoryMute(categoryId as CategoryId)}
+                >
+                  {category.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Sequencer Grid */}
+          <div style={{ 
+            padding: '12px 18px 12px 3px',
+            marginBottom: '2rem'
+          }}>
+            {/* Solo Dots Row (Top) */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '6px', 
+              marginBottom: '6px',
+              paddingLeft: '15px'
+            }}>
+              {Array.from({ length: 8 }, (_, pad) => (
+                <button
+                  key={`mobile-solo-${pad}`}
+                  style={{
+                    flex: 1,
+                    height: '6px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    const currentSolo = soloedTracks[activeCategory];
+                    const newSolo = currentSolo === pad ? null : pad;
+                    setSoloTrack(activeCategory, newSolo as PadIndex | null);
+                  }}
+                >
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: soloedTracks[activeCategory] === pad ? activeColor : 'rgba(255, 255, 255, 0.12)'
+                  }} />
+                </button>
+              ))}
+            </div>
+
+            {/* Main Mobile Grid */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '3px'
+            }}>
+              {/* Step Numbers (Left) */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '6px',
+                marginRight: '3px'
+              }}>
+              {Array.from({ length: NUM_STEPS }, (_, step) => (
+                <div key={`mobile-step-${step}`} style={{
+                  width: '12px',
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontWeight: 500,
+                  fontSize: '11px',
+                  color: (step + 1) % 4 === 1 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.2)',
+                  transform: 'rotate(270deg)',
+                  transformOrigin: 'center'
+                }}>
+                  {step + 1}
+                </div>
+              ))}
+              </div>
+
+              {/* Grid Cells */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '6px',
+                flex: 1
+              }}>
+                {Array.from({ length: NUM_STEPS }, (_, step) => (
+                  <div key={`mobile-row-${step}`} style={{ 
+                    display: 'flex', 
+                    gap: '6px'
+                  }}>
+                    {Array.from({ length: 8 }, (_, pad) => (
+                      <button
+                        key={`mobile-${pad}-${step}`}
+                        style={{
+                          flex: 1,
+                          aspectRatio: '1',
+                          borderRadius: '6px',
+                          border: step === currentStep ? '2px solid #fcfcfc' : '2px solid #08080A',
+                          backgroundImage: Boolean(activeGrid[pad] && activeGrid[pad][step])
+                            ? `linear-gradient(${activeColor}, ${activeColor}), linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))`
+                            : 'linear-gradient(rgb(34, 33, 38), rgb(33, 32, 37))',
+                          boxShadow: Boolean(activeGrid[pad] && activeGrid[pad][step])
+                            ? 'rgba(255, 255, 255, 0.2) 2px 3px 2px 0px inset, rgba(255, 255, 255, 0.23) 1px 1px 1px 0px inset'
+                            : '3px 2px 2px 0 rgb(255 255 255 / 3%) inset, 1px 1px 1px 0 rgb(255 255 255 / 13%) inset',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={() => {
+                          toggleGridCell(pad as PadIndex, step as StepIndex);
+                          // Trigger immediate audio playback
+                          if (schedulerRef.current) {
+                            schedulerRef.current.triggerPad(pad, activeCategory);
+                          }
+                        }}
+                        aria-pressed={activeGrid[pad] && activeGrid[pad][step] ? 'true' : 'false'}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Buttons Row (Bottom) */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '6px', 
+              marginTop: '6px',
+              paddingLeft: '15px'
+            }}>
+              {Array.from({ length: 8 }, (_, pad) => {
+                // Only show clear button if this track has at least one active pad
+                const hasActivePads = activeGrid[pad] && activeGrid[pad].some(step => step);
+                
+                if (!hasActivePads) {
+                  return <div key={`mobile-clear-${pad}`} style={{ flex: 1, height: '8px' }} />;
+                }
+                
+                return (
+                  <button
+                    key={`mobile-clear-${pad}`}
+                    style={{
+                      flex: 1,
+                      height: '8px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onClick={() => clearTrack(activeCategory, pad as PadIndex)}
+                  >
+                    <svg width="8" height="8" viewBox="0 0 12 12" fill="white" style={{ 
+                      opacity: 0.2,
+                      transition: 'opacity 0.2s ease'
+                    }}>
+                      <path d="M9.5 2.5L2.5 9.5M2.5 2.5L9.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout Only */}
+        <div className="hidden md:block">
+        {/* Desktop Controls Row */}
         <div style={{ 
           display: 'flex', 
           gap: '8px', 
@@ -382,7 +689,7 @@ function App() {
           </div>
         </div>
 
-        {/* Column Numbers Row */}
+        {/* Desktop Column Numbers Row */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: `repeat(${NUM_STEPS}, 48px)`, 
@@ -409,7 +716,7 @@ function App() {
           ))}
         </div>
 
-        {/* Sequencer Grid with Side Columns */}
+        {/* Desktop Sequencer Grid with Side Columns */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'center',
@@ -529,10 +836,11 @@ function App() {
           </div>
         </div>
 
-        {/* Category Tabs */}
+        {/* Desktop Category Tabs */}
         <CategoryTabs />
 
         {/* Test buttons removed per requirements */}
+        </div>
       </div>
     </div>
   );

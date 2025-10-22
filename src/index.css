@@ -392,3 +392,39 @@ body {
   background-position: center;
   background-repeat: no-repeat;
 }
+
+/* Responsive utility classes */
+.hidden {
+  display: none;
+}
+
+.block {
+  display: block;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+/* Medium breakpoint (768px and up) */
+@media (min-width: 768px) {
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:block {
+    display: block;
+  }
+
+  .md\:flex {
+    display: flex;
+  }
+
+  .md\:grid {
+    display: grid;
+  }
+
+  .md\:p-8 {
+    padding: 2rem;
+  }
+}
