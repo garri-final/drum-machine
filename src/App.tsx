@@ -549,15 +549,11 @@ function App() {
               display: 'flex', 
               gap: '6px', 
               marginTop: '6px',
-              paddingLeft: '15px'
+              paddingLeft: '18px'
             }}>
               {Array.from({ length: 8 }, (_, pad) => {
                 // Only show clear button if this track has at least one active pad
                 const hasActivePads = activeGrid[pad] && activeGrid[pad].some(step => step);
-                
-                if (!hasActivePads) {
-                  return <div key={`mobile-clear-${pad}`} style={{ flex: 1, height: '8px' }} />;
-                }
                 
                 return (
                   <button
@@ -567,19 +563,28 @@ function App() {
                       height: '8px',
                       border: 'none',
                       background: 'transparent',
-                      cursor: 'pointer',
+                      cursor: hasActivePads ? 'pointer' : 'default',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
-                    onClick={() => clearTrack(activeCategory, pad as PadIndex)}
+                    onClick={() => hasActivePads && clearTrack(activeCategory, pad as PadIndex)}
                   >
-                    <svg width="8" height="8" viewBox="0 0 12 12" fill="white" style={{ 
-                      opacity: 0.2,
-                      transition: 'opacity 0.2s ease'
-                    }}>
-                      <path d="M9.5 2.5L2.5 9.5M2.5 2.5L9.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
+                    {hasActivePads && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ 
+                        opacity: 0.2,
+                        transition: 'opacity 0.2s ease'
+                      }}>
+                        <g clipPath="url(#clip0_7_5911)">
+                          <path d="M0.713867 0.714279L9.2853 9.28571M9.2853 0.714279L0.713867 9.28571" stroke="white" strokeWidth="1.5"/>
+                        </g>
+                        <defs>
+                          <clipPath id="clip0_7_5911">
+                            <rect width="10" height="10" fill="white"/>
+                          </clipPath>
+                        </defs>
+                      </svg>
+                    )}
                   </button>
                 );
               })}
