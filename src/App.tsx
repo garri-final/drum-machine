@@ -3,6 +3,7 @@ import { NUM_STEPS, NUM_TRACKS } from './types';
 import { SequencerScheduler } from './audio/scheduler';
 import { useSequencerStore } from './state/useSequencerStore';
 import { CategoryTabs } from './ui/CategoryTabs';
+import { SkeletonLoader } from './ui/SkeletonLoader';
 // import { SequencerGrid } from './ui/SequencerGrid';
 import { categories } from './data/categories';
 import { samples } from './data/samples';
@@ -272,14 +273,7 @@ function App() {
 
 
   if (isLoading) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#000000', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Drum Machine</h1>
-          <div style={{ fontSize: '1.2rem' }}>Loading samples...</div>
-        </div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
